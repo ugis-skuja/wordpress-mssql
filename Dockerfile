@@ -1,6 +1,3 @@
-#
-# Dockerfile: Extend WordPress (php8.3-apache) to support MSSQL connections
-#
 FROM wordpress:php8.3-apache
 
 # Install system dependencies required for building and using MS SQL PHP extensions
