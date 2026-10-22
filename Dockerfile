@@ -1,20 +1,28 @@
-FROM wordpress:php8.3-apache
+FROM wordpress:php8.5-apache
 
-ENV ACCEPT_EULA=Y
-
-RUN a2enmod expires \
-    && a2enmod headers \
-    && apt-get update \
-    && apt-get install -y apt-transport-https gnupg2 unzip \
-    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && echo "Package: unixodbc\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 100\n" >> /etc/apt/preferences.d/microsoft \
-    && echo "Package: unixodbc-dev\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 100\n" >> /etc/apt/preferences.d/microsoft \
-    && echo "Package: libodbc1:amd64\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 100\n" >> /etc/apt/preferences.d/microsoft \
-    && echo "Package: odbcinst\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 100\n" >> /etc/apt/preferences.d/microsoft \
-    && echo "Package: odbcinst1debian2:amd64\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 100\n" >> /etc/apt/preferences.d/microsoft \
-    && apt-get update \
-    && apt-get install -y msodbcsql18 mssql-tools18 unixodbc-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && pecl install sqlsrv pdo_sqlsrv \
-    && docker-php-ext-enable sqlsrv pdo_sqlsrv
+RUN set -eux; \
+    a2enmod headers; \
+    \
+    . /etc/os-release; \
+    curl -fsSL \
+      "https://packages.microsoft.com/config/debian/${VERSION_ID%%.*}/packages-microsoft-prod.deb" \
+      -o /tmp/packages-microsoft-prod.deb; \
+    dpkg -i /tmp/packages-microsoft-prod.deb; \
+    rm /tmp/packages-microsoft-prod.deb; \
+    \
+    apt-get update; \
+    ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
+      msodbcsql18=18.7.1.1-1 \
+      unixodbc-dev \
+      libgssapi-krb5-2; \
+    \
+    pecl install \
+      sqlsrv-5.13.3 \
+      pdo_sqlsrv-5.13.3; \
+    docker-php-ext-enable sqlsrv pdo_sqlsrv; \
+    \
+    php --ri sqlsrv; \
+    php --ri pdo_sqlsrv; \
+    odbcinst -q -d; \
+    \
+    rm -rf /tmp/pear /var/lib/apt/lists/*
